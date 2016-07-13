@@ -85,11 +85,13 @@ public:
 
   virtual Try<Warnings> load(
       const std::map<std::string, Option<std::string>>& values,
-      bool unknowns = false);
+      bool unknowns = false,
+      const Option<std::string>& prefix = None());
 
   virtual Try<Warnings> load(
       const std::map<std::string, std::string>& values,
-      bool unknowns = false);
+      bool unknowns = false,
+      const Option<std::string>& prefix = None());
 
   // Returns a string describing the flags, preceded by a "usage
   // message" that will be prepended to that description (see
@@ -372,9 +374,10 @@ private:
   std::map<std::string, Option<std::string>> extract(const std::string& prefix);
 
   Try<Warnings> load(
-      const Multimap<std::string, Option<std::string>>& values,
+      Multimap<std::string, Option<std::string>>& values,
       bool unknowns = false,
-      bool duplicates = false);
+      bool duplicates = false,
+      const Option<std::string>& prefix = None());
 
   // Maps flag's name to flag.
   std::map<std::string, Flag> flags_;
@@ -783,19 +786,7 @@ inline Try<Warnings> FlagsBase::load(
     values.put(name, value);
   }
 
-  if (prefix.isSome()) {
-    // Merge in flags from the environment. Command-line
-    // flags take precedence over environment flags.
-    foreachpair (const std::string& name,
-                 const Option<std::string>& value,
-                 extract(prefix.get())) {
-      if (!values.contains(name)) {
-        values.put(name, value);
-      }
-    }
-  }
-
-  return load(values, unknowns, duplicates);
+  return load(values, unknowns, duplicates, prefix);
 }
 
 
@@ -851,19 +842,7 @@ inline Try<Warnings> FlagsBase::load(
     values.put(name, value);
   }
 
-  if (prefix.isSome()) {
-    // Merge in flags from the environment. Command-line
-    // flags take precedence over environment flags.
-    foreachpair (const std::string& name,
-                 const Option<std::string>& value,
-                 extract(prefix.get())) {
-      if (!values.contains(name)) {
-        values.put(name, value);
-      }
-    }
-  }
-
-  Try<Warnings> result = load(values, unknowns, duplicates);
+  Try<Warnings> result = load(values, unknowns, duplicates, prefix);
 
   // Update 'argc' and 'argv' if we successfully loaded the flags.
   if (!result.isError()) {
@@ -887,7 +866,9 @@ inline Try<Warnings> FlagsBase::load(
 
 inline Try<Warnings> FlagsBase::load(
     const std::map<std::string, Option<std::string>>& values,
-    bool unknowns)
+    bool unknowns,
+    const Option<std::string>& prefix
+    )
 {
   Multimap<std::string, Option<std::string>> values_;
   foreachpair (const std::string& name,
@@ -895,28 +876,42 @@ inline Try<Warnings> FlagsBase::load(
                values) {
     values_.put(name, value);
   }
-  return load(values_, unknowns);
+  return load(values_, unknowns, false, prefix);
 }
 
 
 inline Try<Warnings> FlagsBase::load(
     const std::map<std::string, std::string>& values,
-    bool unknowns)
+    bool unknowns,
+    const Option<std::string>& prefix)
 {
   Multimap<std::string, Option<std::string>> values_;
   foreachpair (const std::string& name, const std::string& value, values) {
     values_.put(name, Some(value));
   }
-  return load(values_, unknowns);
+  return load(values_, unknowns, false, prefix);
 }
 
 
 inline Try<Warnings> FlagsBase::load(
-    const Multimap<std::string, Option<std::string>>& values,
+    Multimap<std::string, Option<std::string>>& values,
     bool unknowns,
-    bool duplicates)
+    bool duplicates,
+    const Option<std::string>& prefix)
 {
   Warnings warnings;
+
+  if (prefix.isSome()) {
+    // Merge in flags from the environment. Command-line
+    // flags take precedence over environment flags.
+    foreachpair (const std::string& name,
+                 const Option<std::string>& value,
+                 extract(prefix.get())) {
+      if (!values.contains(name)) {
+        values.put(name, value);
+      }
+    }
+  }
 
   foreachpair (const std::string& name,
                const Option<std::string>& value,
