@@ -30,12 +30,24 @@ class Flags : public logging::Flags
 public:
   Flags()
   {
+    add(&Flags::work_dir,
+        "work_dir",
+        "Path of the master/agent work directory. This is where the "
+        "persistent\n"
+        "information of the cluster will be stored. Note that locations like\n"
+        "`/tmp` which are cleaned automatically are not suitable for the work\n"
+        "directory when running in production, since long-running masters "
+        "could\n"
+        "lose data when cleanup occurs. (Example: `/var/lib/mesos/master`)",
+        "/tmp/mesos/local");
+
     add(&Flags::num_slaves,
         "num_slaves",
         "Number of agents to launch for local cluster",
         1);
   }
 
+  std::string work_dir;
   int num_slaves;
 };
 
